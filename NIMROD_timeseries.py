@@ -21,17 +21,21 @@ import matplotlib as mpl
 from linecache import getline
 import numpy as np
 
+from create_hydroindex import create_base_indexgrid
+
 import pyproj
 
 
 # File name of ASCII digital elevation model
 #path = "/home/dvalters/asciifiles/"
 # As long as you are sure all your radar files have been converted similarly, any sample radar (in ascii format) will work.
-radarpath = "D:\\DATASETS\\NIMROD\\NIMROD\\1km-Composite\\2005\\19June\\datfiles\\"
-radarsource = radarpath + "metoffice-c-band-rain-radar_uk_200506191500_1km-composite.dat.asc"
+#radarpath = "D:\\DATASETS\\NIMROD\\NIMROD\\1km-Composite\\2005\\19June\\datfiles\\"
+radarpath = "/home/dav/DATADRIVE/DATASETS/NIMROD/NIMROD/BOSCASTLE/Boscastleflood/asciifiles/"
+radarsource = radarpath + "metoffice-c-band-rain-radar_uk_200408160000_1km-composite.txt"
 
-basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
-basinsource = basinpath + 'ryedale_20m_basin.asc'
+#basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
+basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
+basinsource = basinpath + 'boscastle5m_bedrock_fill_outlet.asc'
 
 # This is to transform the osgb coords into UTM ones.
 def convert_OSGB36_to_UTM30(xcoord, ycoord):
@@ -74,7 +78,7 @@ def calculate_crop_coords(basin_header, radar_header):
     
     nrows_bas = basin_header[1]
     ncols_bas = basin_header[0]
-    
+
     cellres_rad = radar_header[4]
     cellres_bas = basin_header[4]
     
@@ -95,10 +99,12 @@ def calculate_crop_coords(basin_header, radar_header):
 
 rainfile = []
 
+
 # Now do this in a file-by-file loop
 def extract_cropped_rain_data():
-    for f in glob.iglob('*.asc'):
-        print f
+    cum_rain_totals = np.zeros((1,1)) # shape is arbitrary here, it gets changed later
+    for f in glob.iglob('/home/dav/DATADRIVE/DATASETS/NIMROD/NIMROD/BOSCASTLE/Boscastleflood/asciifiles/*composite.txt'):
+        #print f
         basin_header = read_ascii_header(basinsource)  # this does not change as there is only one file
         radar_header = read_ascii_header(f)   # need to check the header each time for radar
         
@@ -116,17 +122,31 @@ def extract_cropped_rain_data():
             end_col = end_col + 1
         ##### WARNING THIS IS A FUDGE!
 
-        print start_col, start_row, end_col, end_row        
+        #print start_col, start_row, end_col, end_row        
         
+        # Load in the entire rainfall radar grid for this timestep
         cur_rawgrid = np.loadtxt(f, skiprows=6)
-        print cur_rawgrid.shape
         # perhaps make sure that -1 values and NODATA values are masked or made = 0 
-        #(should not be issue over land but better safe than sorry)
+        # (should not be issue over land but better safe than sorry)
+        
+        # Crop the rainfall radar grid of the whole country to the subset area
         cur_croppedrain = cur_rawgrid[start_row:end_row, start_col:end_col]###/32   division done in NimPy now 
-        print cur_croppedrain.shape
+        
+        
+        # Create the first row of the rainfile by stacking the rainfall rates side by side with hstack
         cur_rainrow = np.hstack(cur_croppedrain)
-        #print cur_rainrow
+        
+        # Add this to the rainfile list (i.e. add the next row for the next timestep)
         rainfile.append(cur_rainrow)
+        
+        if cum_rain_totals.shape != cur_croppedrain.shape:
+            new_shape = cur_croppedrain.shape
+            cum_rain_totals = np.zeros(new_shape)
+        
+        cum_rain_totals += cur_croppedrain
+        
+    #print total_rainfall
+    np.savetxt('rainfall_totals_boscastle.asc', cum_rain_totals, delimiter=' ', fmt='%1.1f')
     
     #print rainfile in current format
     rainfile_arr = np.vstack(rainfile)
@@ -154,6 +174,59 @@ def extract_cropped_rain_data():
     ## Save to file in the CAESAR required format
     np.savetxt('test_rainfile_hourly.txt', rounded_hourly_rain, delimiter=' ', fmt='%1.1f')  # the fmt bit gives it to 1 decimal place. Oddly, the rounding step above is non-permanent??
     
+def create_catchment_mean_rainfall(rainfile):
+    # For the Uniform rainfall test cases in CAESAR
+    # Takes the rainfile txt file and takes the average of all raincells over the catchment, returning a single hourly timeseries for
+    # the whole catchment.
+    rainfile_arr = np.loadtxt(rainfile)
+    average_rain_arr = np.mean(rainfile_arr, axis=1)
+    np.savetxt("RYEDALE_rainfile_uniform72hr_5min.txt", average_rain_arr, delimiter=' ', fmt='%1.1f')
+
+# Actually, for mean rainfall, cells not entirely within the catchmnet boundaries should be weighted appropriately.    
+def create_catchment_weighted_rainfall(rainfile):
+    rainfile_arr = np.loadtxt(rainfile)
+    weighting_grid = calculate_weighting_array(rainfile_arr)
+    # stack the weighting grid
+    # we are going to broadcast a horizontal row to all the columns in the next step,
+    # so we need to hstack our weighting_grid.
+    weighting_flattened = np.hstack(weighting_grid)
+    # open the variable rainfile, multiply columns by weighting amounts
+    weighted_rainfall_arr = rainfile_arr * weighting_flattened
+    # average along axis 1.
+    average_weighted_rain_array = np.mean(weighted_rainfall_arr, axis=1)
+    np.savetxt("WEIGHTED_UNIFORM_RAINFALL.txt", average_weighted_rain_array, delimiter=' ', fmt='%1.1f')
+
+"""
+Creates an array of weighting amounts based on radar rain cells that 
+do not fully cover the catchment domain
+"""
+def calculate_weighting_array(sample_cropped_rain, terrain_dem):
+    terrain_array = np.loadtxt(terrain_dem, skiprows=6)
+    terrain_NODATA = read_ascii_header(terrain_dem)[5]
+    
+    # no need to reload sample image, use base index grid
+    baseindexgrid = create_base_indexgrid()
+    weighting_array = np.ones(np.shape(baseindexgrid))
+    
+    upscaled_baseindexgrid = create_hydroindex.create_upscaled_hydroindex(baseindexgrid)
+    
+    # Iterate row-wise over the entire arrat, allow writing values to array
+    for i in np.nditer(weighting_array, op_flags=['readwrite']):
+        # Check that the arrays are the same shape
+        print terrain_array.shape == upscaled_baseindexgrid.shape
+        # Create a boolean array where the terrain data is elevations (not nodata) 
+        ## and where we are in the current radar grid cell. 
+        cells_in_catchment_boolean = (terrain_array != terrain_NODATA) & (upscaled_baseindexgrid == i)
+        # Sum the boolean array to get number of hydroindex cells in catchmnet
+        number_of_catchment_cells = cells_in_catchment_boolean.sum()
+        # Will be 1 if all cells are in the catchment
+        weighting_ratio = number_of_catchment_cells / cells_in_catchment_boolean.size
+        # set weighting ratio in array
+        # Note: http://docs.scipy.org/doc/numpy/reference/arrays.nditer.html
+        i[...] = weighting_ratio
+    
+    print weighting_array
+    return weighting_array
 
 def write_sample_radar_img():
     basin_header = read_ascii_header(basinsource)  # this does not change as there is only one file
@@ -198,7 +271,10 @@ extract_cropped_rain_data()
 # This is ok if you just want a sample, the hydroindex is not affected
 # As long as resolution is the same in each file! (this should be more reliable)
 # WRITE A SAMPLE CROPPED RADAR FILE
-write_sample_radar_img()
+##write_sample_radar_img()
+
+# Create an average rainfall file
+#create_catchment_mean_rainfall("C:\\DATA\\PROJECTS\\HYDRO-GEOMORPHIC_STORM_RESPONSE\\CASE_STUDIES\\RYEDALE\\SPATIAL_72hr\\RYEDALE_spatial_72hr_5min.txt")
 
 ##### TO DO #####
 # Write sample raster cropped ascii with correct header info

@@ -21,7 +21,7 @@ import matplotlib as mpl
 from linecache import getline
 import numpy as np
 
-from create_hydroindex import create_base_indexgrid
+import create_hydroindex.py
 
 import pyproj
 
@@ -36,6 +36,8 @@ radarsource = radarpath + "metoffice-c-band-rain-radar_uk_200408160000_1km-compo
 #basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
 basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
 basinsource = basinpath + 'boscastle5m_bedrock_fill_outlet.asc'
+
+CROPPED_RADAR_DEM = "cropped_test_radar.asc"
 
 # This is to transform the osgb coords into UTM ones.
 def convert_OSGB36_to_UTM30(xcoord, ycoord):
@@ -183,9 +185,9 @@ def create_catchment_mean_rainfall(rainfile):
     np.savetxt("RYEDALE_rainfile_uniform72hr_5min.txt", average_rain_arr, delimiter=' ', fmt='%1.1f')
 
 # Actually, for mean rainfall, cells not entirely within the catchmnet boundaries should be weighted appropriately.    
-def create_catchment_weighted_rainfall(rainfile):
+def create_catchment_weighted_rainfall(rainfile, terrain_dem):
     rainfile_arr = np.loadtxt(rainfile)
-    weighting_grid = calculate_weighting_array(rainfile_arr)
+    weighting_grid = calculate_weighting_array(terrain_dem)
     # stack the weighting grid
     # we are going to broadcast a horizontal row to all the columns in the next step,
     # so we need to hstack our weighting_grid.
@@ -200,18 +202,19 @@ def create_catchment_weighted_rainfall(rainfile):
 Creates an array of weighting amounts based on radar rain cells that 
 do not fully cover the catchment domain
 """
-def calculate_weighting_array(sample_cropped_rain, terrain_dem):
+def calculate_weighting_array(terrain_dem):
     terrain_array = np.loadtxt(terrain_dem, skiprows=6)
     terrain_NODATA = read_ascii_header(terrain_dem)[5]
     
     # no need to reload sample image, use base index grid
-    baseindexgrid = create_base_indexgrid()
+    baseindexgrid = create_hydroindex.create_base_indexgrid(CROPPED_RADAR_DEM)
     weighting_array = np.ones(np.shape(baseindexgrid))
     
-    upscaled_baseindexgrid = create_hydroindex.create_upscaled_hydroindex(baseindexgrid)
+    upscaled_baseindexgrid = create_hydroindex.create_upscaled_hydroindex(baseindexgrid, CROPPED_RADAR_DEM)
     
     # Iterate row-wise over the entire arrat, allow writing values to array
-    for i in np.nditer(weighting_array, op_flags=['readwrite']):
+    # Specify that we want to iterate in C-style order, i.e. row by row.
+    for i in np.nditer(weighting_array, op_flags=['readwrite'], order=['C']):
         # Check that the arrays are the same shape
         print terrain_array.shape == upscaled_baseindexgrid.shape
         # Create a boolean array where the terrain data is elevations (not nodata) 

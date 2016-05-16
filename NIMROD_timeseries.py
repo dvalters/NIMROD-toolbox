@@ -57,11 +57,14 @@ radar_wildcard_file = "*composite.txt"
 radar_mult_source = radarpath + radar_wildcard_file
 
 #basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
-basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
+#basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
+basinpath = ""  # Assume working in cuurent directory
 basinsource = basinpath + 'boscastle5m_bedrock_fill_outlet.asc'
 
-CROPPED_RADAR_DEM = "cropped_test_radar.asc"
-TERRAIN_DEM = "ryedale20m_fillcrop.asc"
+CROPPED_RADAR_DEM = "boscastle_crop_radar.asc"
+TERRAIN_DEM = "boscastle5m_bedrock_fill_outlet.asc"
+
+input_rainfile = "boscastle_rain_spatial_48hr.txt"
 
 ###=-=-=-=-=-=-=-=-
 ### OUTPUT NAMES
@@ -73,7 +76,7 @@ five_min_rainfall_spatial_timeseries_name = 'test_rainfile_5min.txt'
 hourly_spatial_rainfall_timeseries_name = 'test_rainfile_hourly.txt'
 
 uniform_hourly_rainfall_name = "RYEDALE_rainfile_uniform72hr_5min.txt"
-weighted_uniform_hourly_rainfall_name = "WEIGHTED_UNIFORM_RAINFALL.txt"
+weighted_uniform_hourly_rainfall_name = "BOSCASTLE_WEIGHTED_UNIFORM_RAINFALL.txt"
 
 cropped_test_radar_name = "cropped_test_radar.asc"
 
@@ -279,12 +282,13 @@ def extract_cropped_rain_data():
         
         # Load in the entire rainfall radar grid for this timestep
         cur_rawgrid = np.loadtxt(f, skiprows=6)
+        print cur_rawgrid
         # perhaps make sure that -1 values and NODATA values are masked or made = 0 
         # (should not be issue over land but better safe than sorry)
         
         # Crop the rainfall radar grid of the whole country to the subset area
         cur_croppedrain = cur_rawgrid[start_row:end_row, start_col:end_col]###/32   division done in NimPy now 
-        
+        print cur_croppedrain
         
         # Create the first row of the rainfile by stacking the rainfall rates side by side with hstack
         cur_rainrow = np.hstack(cur_croppedrain)
@@ -370,28 +374,46 @@ do not fully cover the catchment domain. This is used in conjuction with create_
 def calculate_weighting_array(terrain_dem):
     terrain_array = np.loadtxt(terrain_dem, skiprows=6)
     terrain_NODATA = read_ascii_header(terrain_dem)[5]
+    print terrain_array
     
     # no need to reload sample image, use base index grid
-    baseindexgrid = create_hydroindex.create_base_indexgrid(CROPPED_RADAR_DEM)
+    baseindexgrid = create_base_indexgrid(CROPPED_RADAR_DEM)
+    print baseindexgrid
     weighting_array = np.ones(np.shape(baseindexgrid))
     
-    upscaled_baseindexgrid = create_hydroindex.create_upscaled_hydroindex(baseindexgrid, CROPPED_RADAR_DEM)
+    upscaled_baseindexgrid = create_upscaled_hydroindex(baseindexgrid, CROPPED_RADAR_DEM)
+    print upscaled_baseindexgrid
     
     # Iterate row-wise over the entire arrat, allow writing values to array
     # Specify that we want to iterate in C-style order, i.e. row by row.
-    for i in np.nditer(weighting_array, op_flags=['readwrite'], order=['C']):
+    for i in np.nditer(baseindexgrid, op_flags=['readwrite'], order='C'):
+        print i
         # Check that the arrays are the same shape
-        print terrain_array.shape == upscaled_baseindexgrid.shape
-        # Create a boolean array where the terrain data is elevations (not nodata) 
+        #print terrain_array.shape == upscaled_baseindexgrid.shape
+        
+        ## Create a boolean array where the terrain data is elevations (not nodata) 
         ## and where we are in the current radar grid cell. 
         cells_in_catchment_boolean = (terrain_array != terrain_NODATA) & (upscaled_baseindexgrid == i)
-        # Sum the boolean array to get number of hydroindex cells in catchmnet
+        
+        # COunt the number of cells in this hydroindex zone
+        total_cells_this_hydrozone = np.count_nonzero(upscaled_baseindexgrid == i)
+        print "Total number of cells in hydrozone ", i.__int__(), ": ", total_cells_this_hydrozone
+        
+        #print cells_in_catchment_boolean.size
+        
+        # Sum the boolean array to get number of hydroindex cells in catchment
+        # This gives you the number of cells that are in the current hydro index zone this iteration
+        # that are not over NODATA cells
         number_of_catchment_cells = cells_in_catchment_boolean.sum()
-        # Will be 1 if all cells are in the catchment
-        weighting_ratio = number_of_catchment_cells / cells_in_catchment_boolean.size
+        print "no. of catchment cells: ", number_of_catchment_cells
+        # Should be 1 if all cells are in the catchment
+        weighting_ratio = number_of_catchment_cells / total_cells_this_hydrozone
         # set weighting ratio in array
         # Note: http://docs.scipy.org/doc/numpy/reference/arrays.nditer.html
-        i[...] = weighting_ratio
+        #weighting_array[i] = weighting_ratio
+        print "weigthing ratio: ", weighting_ratio
+        
+        weighting_array.flat[int(i)-1] = weighting_ratio
     
     print weighting_array
     return weighting_array
@@ -430,11 +452,13 @@ def write_sample_radar_img():
 # no. Met office data changes format throughout the day for some datasets, you need a more
 # robust solution that calculates header and start cols each time!!!
 # EXTRACT THE TIME SERIES FROM THE ASCII RADAR FILES
-extract_cropped_rain_data()   
+
+#extract_cropped_rain_data()   
 
 # This is ok if you just want a sample, the hydroindex is not affected
 # As long as resolution is the same in each file! (this should be more reliable)
 # WRITE A SAMPLE CROPPED RADAR FILE
+
 ##write_sample_radar_img()
 
 # Create an average rainfall file
@@ -450,10 +474,10 @@ extract_cropped_rain_data()
 # CREATE HYDRPINDEX
 #=-=-=-=-=-=-=-=-=-=
 
-base_hydroindex = create_base_indexgrid(CROPPED_RADAR_DEM)
-upscaled_hydroindex = create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM)
+#base_hydroindex = create_base_indexgrid(CROPPED_RADAR_DEM)
+#upscaled_hydroindex = create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM)
 
-hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRAIN_DEM)
+#hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRAIN_DEM)
 
 
 #plt.imshow(terrain_mask_test, interpolation='none')
@@ -462,4 +486,7 @@ hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRA
 #print base_hydroindex
 #print upscaled_hydroindex
 
-write_hydroindex_to_file("ryedale_hydroindex_test2.asc", hydroindex_masked)
+#write_hydroindex_to_file("ryedale_hydroindex_test2.asc", hydroindex_masked)
+
+
+create_catchment_weighted_rainfall(input_rainfile, basinsource)

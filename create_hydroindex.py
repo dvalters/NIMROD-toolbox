@@ -42,7 +42,7 @@ you need __init__.py files in each directory.
 
 """
 
-RADAR_DEM = "cropped_test_radar.asc"
+CROPPED_RADAR_DEM = "cropped_test_radar.asc"
 TERRAIN_DEM = "ryedale20m_fillcrop.asc"
 
 
@@ -56,9 +56,9 @@ def read_ascii_header(ascii_raster_file):
     
     return header_data
 
-def create_base_indexgrid():
-    ncols = read_ascii_header(RADAR_DEM)[0]
-    nrows = read_ascii_header(RADAR_DEM)[1]
+def create_base_indexgrid(CROPPED_RADAR_DEM):
+    ncols = read_ascii_header(CROPPED_RADAR_DEM)[0]
+    nrows = read_ascii_header(CROPPED_RADAR_DEM)[1]
     no_of_cells = ncols*nrows
     # The base grid is based on the coarse radar data clipped to the right area.
     # So it should only have a low number of cells really
@@ -68,15 +68,15 @@ def create_base_indexgrid():
     
     return base_indexgrid
     
-def create_upscaled_hydroindex(base_hydroindex):
-    radar_cellsize = read_ascii_header(RADAR_DEM)[4]
+def create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM):
+    radar_cellsize = read_ascii_header(CROPPED_RADAR_DEM)[4]
     terrain_cellsize = read_ascii_header(TERRAIN_DEM)[4]
     # We want to scale up the base grid to the resolution of the terrain DEM
     # that will be used in the model run by a mult_factor
     #mult_factor = radar_cellsize/terrain_cellsize
     #print mult_factor
-    radarNcols = read_ascii_header(RADAR_DEM)[0]
-    radarNrows = read_ascii_header(RADAR_DEM)[1]
+    radarNcols = read_ascii_header(CROPPED_RADAR_DEM)[0]
+    radarNrows = read_ascii_header(CROPPED_RADAR_DEM)[1]
     terrainNcols = read_ascii_header(TERRAIN_DEM)[0]
     terrainNrows = read_ascii_header(TERRAIN_DEM)[1]
     
@@ -131,8 +131,8 @@ def write_hydroindex_to_file(hydroindex_filename, hydroindex_masked):
 # MAIN
 #=-=-=-=-=-
 
-base_hydroindex = create_base_indexgrid()
-upscaled_hydroindex = create_upscaled_hydroindex(base_hydroindex)
+base_hydroindex = create_base_indexgrid(CROPPED_RADAR_DEM)
+upscaled_hydroindex = create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM)
 
 hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRAIN_DEM)
 

@@ -12,15 +12,9 @@ file in ascii format. Hydroindex files are require for use in the LSDCatchmentMo
 and CAESAR-Lisflood models when investigating spatially variable rainfall.
 
 Run this script in the same directory as your clipped (and correctly georeffed)
-radar ascii data file. You will need to set the upsampling resolution. i.e. the 
-grid cell resolution of your corresponding DEMs that will be used in the model
-simulation.
+radar ascii data file. 
 
-So if your DEMs are at 10m resolution, the upscaling resultion needs to be set at 10.
-
-This script does not yet clip the resulting hydroindex to the catchment extent.
-
-DAV, March 2015
+DAV, March 2015, 2016
 
 To Do:
 1) Error handling if Cellsize is not an integer
@@ -52,8 +46,15 @@ import pyproj
 #path = "/home/dvalters/asciifiles/"
 # As long as you are sure all your radar files have been converted similarly, any sample radar (in ascii format) will work.
 #radarpath = "D:\\DATASETS\\NIMROD\\NIMROD\\1km-Composite\\2005\\19June\\datfiles\\"
+
+# USE THIS FOR THE SINGLE RADAR IMAGE EXTRACTION
 radarpath = "/home/dav/DATADRIVE/DATASETS/NIMROD/NIMROD/BOSCASTLE/Boscastleflood/asciifiles/"
 radarsource = radarpath + "metoffice-c-band-rain-radar_uk_200408160000_1km-composite.txt"
+
+# USE THIS FOR SETTING THE DIRECTORY AND FILE BASENAME OF YOUR ASCII RADAR FILES
+# Will match all files in following pattern:
+radar_wildcard_file = "*composite.txt"
+radar_mult_source = radarpath + radar_wildcard_file
 
 #basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
 basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
@@ -61,6 +62,20 @@ basinsource = basinpath + 'boscastle5m_bedrock_fill_outlet.asc'
 
 CROPPED_RADAR_DEM = "cropped_test_radar.asc"
 TERRAIN_DEM = "ryedale20m_fillcrop.asc"
+
+###=-=-=-=-=-=-=-=-
+### OUTPUT NAMES
+###-=-=-=-=-==-=-==
+
+cumulative_rainfall_raster_name = 'rainfall_totals_boscastle.asc'
+
+five_min_rainfall_spatial_timeseries_name = 'test_rainfile_5min.txt'
+hourly_spatial_rainfall_timeseries_name = 'test_rainfile_hourly.txt'
+
+uniform_hourly_rainfall_name = "RYEDALE_rainfile_uniform72hr_5min.txt"
+weighted_uniform_hourly_rainfall_name = "WEIGHTED_UNIFORM_RAINFALL.txt"
+
+cropped_test_radar_name = "cropped_test_radar.asc"
 
 """
 Reads in header information from an ASCII DEM
@@ -241,7 +256,7 @@ It outputs:
 def extract_cropped_rain_data():
     rainfile = []
     cum_rain_totals = np.zeros((1,1)) # shape is arbitrary here, it gets changed later
-    for f in glob.iglob('/home/dav/DATADRIVE/DATASETS/NIMROD/NIMROD/BOSCASTLE/Boscastleflood/asciifiles/*composite.txt'):
+    for f in glob.iglob(radar_mult_source):
         #print f
         basin_header = read_ascii_header(basinsource)  # this does not change as there is only one file
         radar_header = read_ascii_header(f)   # need to check the header each time for radar
@@ -284,11 +299,11 @@ def extract_cropped_rain_data():
         cum_rain_totals += cur_croppedrain
         
     #print total_rainfall
-    np.savetxt('rainfall_totals_boscastle.asc', cum_rain_totals, delimiter=' ', fmt='%1.1f')
+    np.savetxt(cumulative_rainfall_raster_name, cum_rain_totals, delimiter=' ', fmt='%1.1f')
     
     #print rainfile in current format
     rainfile_arr = np.vstack(rainfile)
-    np.savetxt('test_rainfile_5min.txt', rainfile_arr, delimiter=' ', fmt='%1.1f')
+    np.savetxt(five_min_rainfall_spatial_timeseries_name, rainfile_arr, delimiter=' ', fmt='%1.1f')
     
     ## Optional, if your array(rows) are not divisible by an integer
     ## (This would happen if you had an odd number of time steps from the radar)
@@ -310,7 +325,7 @@ def extract_cropped_rain_data():
     rounded_hourly_rain = np.around(hourly_mean, decimals=1)
     
     ## Save to file in the CAESAR required format
-    np.savetxt('test_rainfile_hourly.txt', rounded_hourly_rain, delimiter=' ', fmt='%1.1f')  # the fmt bit gives it to 1 decimal place. Oddly, the rounding step above is non-permanent??
+    np.savetxt(hourly_spatial_rainfall_timeseries_name, rounded_hourly_rain, delimiter=' ', fmt='%1.1f')  # the fmt bit gives it to 1 decimal place. Oddly, the rounding step above is non-permanent??
 
 """
 This creates a mean rainfall timeseries (uniform rainfall), by simply
@@ -323,7 +338,7 @@ def create_catchment_mean_rainfall(rainfile):
     # the whole catchment.
     rainfile_arr = np.loadtxt(rainfile)
     average_rain_arr = np.mean(rainfile_arr, axis=1)
-    np.savetxt("RYEDALE_rainfile_uniform72hr_5min.txt", average_rain_arr, delimiter=' ', fmt='%1.1f')
+    np.savetxt(uniform_hourly_rainfall_name, average_rain_arr, delimiter=' ', fmt='%1.1f')
 
 """
 For mean rainfall, cells not entirely within the catchmnet boundaries should be weighted appropriately.  
@@ -346,7 +361,7 @@ def create_catchment_weighted_rainfall(rainfile, terrain_dem):
     weighted_rainfall_arr = rainfile_arr * weighting_flattened
     # average along axis 1.
     average_weighted_rain_array = np.mean(weighted_rainfall_arr, axis=1)
-    np.savetxt("WEIGHTED_UNIFORM_RAINFALL.txt", average_weighted_rain_array, delimiter=' ', fmt='%1.1f')
+    np.savetxt(weighted_uniform_hourly_rainfall_name, average_weighted_rain_array, delimiter=' ', fmt='%1.1f')
 
 """
 Creates an array of weighting factors based on radar rain cells that 
@@ -406,7 +421,7 @@ def write_sample_radar_img():
     print "SAMPLE RADAR HEADER", sampleradar_header
     sampleradarhdr = convert_array_hdr_to_str_hdr(sampleradar_header)    
     
-    np.savetxt("cropped_test_radar.asc", croppedrain, header=sampleradarhdr, comments='', delimiter=' ', fmt='%1.1f')
+    np.savetxt(cropped_test_radar_name, croppedrain, header=sampleradarhdr, comments='', delimiter=' ', fmt='%1.1f')
 
 #-=-=-=-=-=-=#
 # MAIN -=-=-=#

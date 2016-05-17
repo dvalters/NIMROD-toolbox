@@ -356,15 +356,20 @@ weghting factor to reduce its contribution to the catchment-wide mean.
 """  
 def create_catchment_weighted_rainfall(rainfile, terrain_dem):
     rainfile_arr = np.loadtxt(rainfile)
-    weighting_grid = calculate_weighting_array(terrain_dem)
+    # Mult ratio is the ratio of total radar cells to catchment cells to DEM/RADAR raster size)
+    mult_ratio, weighting_grid = calculate_weighting_array(terrain_dem)
     # stack the weighting grid
     # we are going to broadcast a horizontal row to all the columns in the next step,
     # so we need to hstack our weighting_grid.
     weighting_flattened = np.hstack(weighting_grid)
+    print weighting_flattened
     # open the variable rainfile, multiply columns by weighting amounts
     weighted_rainfall_arr = rainfile_arr * weighting_flattened
+    
+    print rainfile_arr
+    print weighted_rainfall_arr
     # average along axis 1.
-    average_weighted_rain_array = np.mean(weighted_rainfall_arr, axis=1)
+    average_weighted_rain_array = np.mean(weighted_rainfall_arr, axis=1)*mult_ratio
     np.savetxt(weighted_uniform_hourly_rainfall_name, average_weighted_rain_array, delimiter=' ', fmt='%1.1f')
 
 """
@@ -383,6 +388,11 @@ def calculate_weighting_array(terrain_dem):
     
     upscaled_baseindexgrid = create_upscaled_hydroindex(baseindexgrid, CROPPED_RADAR_DEM)
     print upscaled_baseindexgrid
+    
+    # Number of grid cells in radar image
+    no_radar_cells = upscaled_baseindexgrid.size
+    # Number of actual catchment cells (total)
+    no_catchment_cells = (terrain_array != terrain_NODATA).sum()
     
     # Iterate row-wise over the entire arrat, allow writing values to array
     # Specify that we want to iterate in C-style order, i.e. row by row.
@@ -405,7 +415,7 @@ def calculate_weighting_array(terrain_dem):
         # This gives you the number of cells that are in the current hydro index zone this iteration
         # that are not over NODATA cells
         number_of_catchment_cells = cells_in_catchment_boolean.sum()
-        print "no. of catchment cells: ", number_of_catchment_cells
+        print "no. of catchment cells within hydrozone: ", number_of_catchment_cells
         # Should be 1 if all cells are in the catchment
         weighting_ratio = number_of_catchment_cells / total_cells_this_hydrozone
         # set weighting ratio in array
@@ -415,8 +425,10 @@ def calculate_weighting_array(terrain_dem):
         
         weighting_array.flat[int(i)-1] = weighting_ratio
     
+    # To correct for the size of catchment relative to radar grid rectangular size. 
+    mult_ratio = no_radar_cells / no_catchment_cells
     print weighting_array
-    return weighting_array
+    return mult_ratio, weighting_array
 
 """
 This writes a sample cropped radar raster for checking purposes.

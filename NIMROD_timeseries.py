@@ -59,12 +59,12 @@ radar_mult_source = radarpath + radar_wildcard_file
 #basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
 #basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
 basinpath = ""  # Assume working in cuurent directory
-basinsource = basinpath + 'boscastle5m_bedrock_fill_outlet.asc'
+basinsource = basinpath + 'ryedale_20m_basin.asc'
 
-CROPPED_RADAR_DEM = "boscastle_crop_radar.asc"
-TERRAIN_DEM = "boscastle5m_bedrock_fill_outlet.asc"
+CROPPED_RADAR_DEM = "RYEDALE_crop_radar.asc"
+TERRAIN_DEM = "ryedale_20m_basin.asc"
 
-input_rainfile = "boscastle_rain_spatial_48hr.txt"
+input_rainfile = "RYEDALE_rainfile_5min_spatial_24hr.txt"
 
 ###=-=-=-=-=-=-=-=-
 ### OUTPUT NAMES
@@ -75,10 +75,10 @@ cumulative_rainfall_raster_name = 'rainfall_totals_boscastle.asc'
 five_min_rainfall_spatial_timeseries_name = 'test_rainfile_5min.txt'
 hourly_spatial_rainfall_timeseries_name = 'test_rainfile_hourly.txt'
 
-uniform_hourly_rainfall_name = "RYEDALE_rainfile_uniform72hr_5min.txt"
-weighted_uniform_hourly_rainfall_name = "BOSCASTLE_WEIGHTED_UNIFORM_RAINFALL.txt"
+uniform_hourly_rainfall_name = "RYEDALE_rainfile_uniform24hr_5min.txt"
+weighted_uniform_hourly_rainfall_name = "RYEDALE_rainfile_uniform24hr_5min_weighted.txt"
 
-cropped_test_radar_name = "cropped_test_radar.asc"
+cropped_test_radar_name = "RYEDALE_crop_radar.asc"
 
 """
 Reads in header information from an ASCII DEM
@@ -276,7 +276,9 @@ def extract_cropped_rain_data():
         ##### WARNING MAsSIVE FUDGE CODE WITH MAGIC NUMBERS
         if radar_header[0] < 1000:
             end_col = end_col + 1
-        ##### WARNING THIS IS A FUDGE!
+        ##### WARNING THIS IS A FUDGE TO GET AROUND THE STUPID CHANGING RADAR DOMAIN SIZES!
+            
+        # Can replace above with if statement?
 
         #print start_col, start_row, end_col, end_row        
         
@@ -318,12 +320,15 @@ def extract_cropped_rain_data():
         print rainfile_arr.shape #just to check, should be even now
         rainfile_arr_rows, rainfile_arr_cols = rainfile_arr.shape # double check we have even no. or rows
     
-    ## Now we are going to calculate hourly rainfall from the 5 min data by taking binned averages
+    # Now we are going to calculate hourly rainfall from the 5 min data by taking binned averages
     # First, reshape the array into 3d bins:
     reshaped_rain = np.reshape(rainfile_arr, ((rainfile_arr_rows/12),12,rainfile_arr_cols)) # assuming 
-    # shape = (number of timesteps in new rainfall file, radar interval to new timestep interval [i.e 5mins to 1hour steps would be 60/5 =12], no of cols
+    # shape = (number of timesteps in new rainfall file, radar interval to new timestep interval 
+    #[i.e 5mins to 1hour steps would be 60/5 =12], no of cols
     
-    hourly_mean = reshaped_rain.mean(axis=1)  # we are taking the mean down the columns. Remember that we have already binned into hourly bins previously.
+    # We are taking the mean down the columns. 
+    # Remember that we have already binned into hourly bins previously.
+    hourly_mean = reshaped_rain.mean(axis=1)  
     print hourly_mean.shape # just to check (it should print the number of hours (rows) by grid cells (columns))
     
     rounded_hourly_rain = np.around(hourly_mean, decimals=1)
@@ -362,12 +367,12 @@ def create_catchment_weighted_rainfall(rainfile, terrain_dem):
     # we are going to broadcast a horizontal row to all the columns in the next step,
     # so we need to hstack our weighting_grid.
     weighting_flattened = np.hstack(weighting_grid)
-    print weighting_flattened
+    #print weighting_flattened
     # open the variable rainfile, multiply columns by weighting amounts
     weighted_rainfall_arr = rainfile_arr * weighting_flattened
     
     print rainfile_arr
-    print weighted_rainfall_arr
+    #print weighted_rainfall_arr
     # average along axis 1.
     average_weighted_rain_array = np.mean(weighted_rainfall_arr, axis=1)*mult_ratio
     np.savetxt(weighted_uniform_hourly_rainfall_name, average_weighted_rain_array, delimiter=' ', fmt='%1.1f')
@@ -383,11 +388,11 @@ def calculate_weighting_array(terrain_dem):
     
     # no need to reload sample image, use base index grid
     baseindexgrid = create_base_indexgrid(CROPPED_RADAR_DEM)
-    print baseindexgrid
+    #print baseindexgrid
     weighting_array = np.ones(np.shape(baseindexgrid))
     
     upscaled_baseindexgrid = create_upscaled_hydroindex(baseindexgrid, CROPPED_RADAR_DEM)
-    print upscaled_baseindexgrid
+    #print upscaled_baseindexgrid
     
     # Number of grid cells in radar image
     no_radar_cells = upscaled_baseindexgrid.size
@@ -427,7 +432,7 @@ def calculate_weighting_array(terrain_dem):
     
     # To correct for the size of catchment relative to radar grid rectangular size. 
     mult_ratio = no_radar_cells / no_catchment_cells
-    print weighting_array
+    #print weighting_array
     return mult_ratio, weighting_array
 
 """

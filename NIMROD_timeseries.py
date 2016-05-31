@@ -58,19 +58,12 @@ radar_mult_source = radarpath + radar_wildcard_file
 
 #basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
 #basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
-<<<<<<< HEAD
-basinpath = ""  # Assume working in cuurent directory
-basinsource = basinpath + 'ryedale_20m_basin.asc'
 
-CROPPED_RADAR_DEM = "RYEDALE_crop_radar.asc"
-TERRAIN_DEM = "ryedale_20m_basin.asc"
-=======
 basinpath = "/mnt/bbc62661-d135-4fe6-a100-2c2eb39ae34d/Analyses/HydrogeomorphPaper/RYEDALE"  
 basinsource = basinpath + 'ryedale5m_bedrock_fill.asc'
 
 CROPPED_RADAR_DEM = "ryedale_cropped_test_radar.asc"
 TERRAIN_DEM = "/mnt/bbc62661-d135-4fe6-a100-2c2eb39ae34d/Analyses/HydrogeomorphPaper/RYEDALE/ryedale5m_bedrock_fill.asc"
->>>>>>> 4f32c165561e82b828c49b8325acabb5582f1ff2
 
 input_rainfile = "RYEDALE_rainfile_5min_spatial_24hr.txt"
 
@@ -83,17 +76,10 @@ cumulative_rainfall_raster_name = 'rainfall_totals_boscastle.asc'
 five_min_rainfall_spatial_timeseries_name = 'test_rainfile_5min.txt'
 hourly_spatial_rainfall_timeseries_name = 'test_rainfile_hourly.txt'
 
-<<<<<<< HEAD
-uniform_hourly_rainfall_name = "RYEDALE_rainfile_uniform24hr_5min.txt"
-weighted_uniform_hourly_rainfall_name = "RYEDALE_rainfile_uniform24hr_5min_weighted.txt"
-
-cropped_test_radar_name = "RYEDALE_crop_radar.asc"
-=======
 uniform_hourly_rainfall_name = "RYEDALE_rainfile_uniform72hr_5min.txt"
 weighted_uniform_hourly_rainfall_name = "RYEDALE_WEIGHTED_UNIFORM_RAINFALL.txt"
 
 cropped_test_radar_name = "ryedale_cropped_test_radar.asc"
->>>>>>> 4f32c165561e82b828c49b8325acabb5582f1ff2
 
 """
 Reads in header information from an ASCII DEM

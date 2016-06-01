@@ -59,13 +59,13 @@ radar_mult_source = radarpath + radar_wildcard_file
 #basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
 #basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
 
-basinpath = "/mnt/bbc62661-d135-4fe6-a100-2c2eb39ae34d/Analyses/HydrogeomorphPaper/RYEDALE"  
-basinsource = basinpath + 'ryedale5m_bedrock_fill.asc'
+basinpath = "/mnt/bbc62661-d135-4fe6-a100-2c2eb39ae34d/Analyses/HydrogeomorphPaper/BOSCASTLE/PaperSimulations/"  
+basinsource = basinpath + 'boscastle5m_bedrock_fill.asc'
 
-CROPPED_RADAR_DEM = "ryedale_cropped_test_radar.asc"
-TERRAIN_DEM = "/mnt/bbc62661-d135-4fe6-a100-2c2eb39ae34d/Analyses/HydrogeomorphPaper/RYEDALE/ryedale5m_bedrock_fill.asc"
+CROPPED_RADAR_DEM = "boscastle_crop_radar.asc"
+TERRAIN_DEM = "/mnt/bbc62661-d135-4fe6-a100-2c2eb39ae34d/Analyses/HydrogeomorphPaper/BOSCASTLE/PaperSimulations/boscastle5m_bedrock_fill.asc"
 
-input_rainfile = "RYEDALE_rainfile_5min_spatial_24hr.txt"
+input_rainfile = "boscastle_rainfile_5min.txt"
 
 ###=-=-=-=-=-=-=-=-
 ### OUTPUT NAMES
@@ -73,13 +73,13 @@ input_rainfile = "RYEDALE_rainfile_5min_spatial_24hr.txt"
 
 cumulative_rainfall_raster_name = 'rainfall_totals_boscastle.asc'
 
-five_min_rainfall_spatial_timeseries_name = 'test_rainfile_5min.txt'
-hourly_spatial_rainfall_timeseries_name = 'test_rainfile_hourly.txt'
+five_min_rainfall_spatial_timeseries_name = 'boscastle_rainfile_5min.txt'
+hourly_spatial_rainfall_timeseries_name = 'boscastle_rainfile_hourly.txt'
 
-uniform_hourly_rainfall_name = "RYEDALE_rainfile_uniform72hr_5min.txt"
-weighted_uniform_hourly_rainfall_name = "RYEDALE_WEIGHTED_UNIFORM_RAINFALL.txt"
+uniform_hourly_rainfall_name = "BOSCASTLE_rainfile_uniform24hr_hourly.txt"
+weighted_uniform_hourly_rainfall_name = "BOSCASTLE_WEIGHTED_UNIFORM_RAINFALL_5min.txt"
 
-cropped_test_radar_name = "ryedale_cropped_test_radar.asc"
+cropped_test_radar_name = "boscastle_crop_radar.asc"
 
 """
 Reads in header information from an ASCII DEM
@@ -216,35 +216,45 @@ data in the radar raster and terrain DEMs
 """
 def calculate_crop_coords(basin_header, radar_header):
     # set values for easier calcs
-    y0_rad = round(radar_header[3])
-    x0_rad = round(radar_header[2])
+    y0_radar = radar_header[3]
+    x0_radar = radar_header[2]
+    print x0_radar, y0_radar
     
-    y0_bas = round(basin_header[3])
-    x0_bas = round(basin_header[2])
+    y0_basin = basin_header[3]
+    x0_basin = basin_header[2]
     
-    x0_bas, y0_bas = convert_OSGB36_to_UTM30(x0_bas, y0_bas)
+    x0_basin_UTM, y0_basin_UTM = convert_OSGB36_to_UTM30(x0_basin, y0_basin)
+    print x0_basin_UTM, y0_basin_UTM
     
-    nrows_rad = radar_header[1]
-    ncols_rad = radar_header[0]
+    x0_radar_UTM, y0_radar_UTM = convert_OSGB36_to_UTM30(x0_radar, y0_radar)
+    print x0_radar_UTM, y0_radar_UTM
     
-    nrows_bas = basin_header[1]
-    ncols_bas = basin_header[0]
+    nrows_radar = radar_header[1]
+    ncols_radar = radar_header[0]
+    
+    nrows_basin = basin_header[1]
+    ncols_basin = basin_header[0]
 
-    cellres_rad = radar_header[4]
-    cellres_bas = basin_header[4]
+    cellres_radar = radar_header[4]
+    cellres_basin = basin_header[4]
     
-    xp = x0_bas - x0_rad
-    yp = y0_bas - y0_rad
+    xp = x0_basin_UTM - x0_radar_UTM
+    yp = y0_basin_UTM - y0_radar_UTM
+    print "xp:", xp, yp
     
-    xpp = ncols_bas * cellres_bas
-    ypp = nrows_bas * cellres_bas
+    xpp = ncols_basin * cellres_basin
+    ypp = nrows_basin * cellres_basin
+    print "ypp: ", xpp, ypp 
     
-    start_col = xp / cellres_rad
-    end_col = (xpp + xp) / cellres_rad
+    # Floor and Ceil used to ensure all rainfall area covering basin is captured,
+    # Even if 
+    start_col = np.floor( xp / cellres_radar )-1   #Should be -1 as indexing starts at 0?
+    end_col = np.ceil( (xpp + xp) / cellres_radar )-1
     
-    start_row = nrows_rad - ( (yp + ypp)/cellres_rad )
-    end_row = nrows_rad - (yp/cellres_rad)
+    start_row = np.floor(nrows_radar - ( (yp + ypp)/cellres_radar ))  -1
+    end_row = np.ceil(nrows_radar - (yp/cellres_radar)) -1
     
+    print start_col, start_row, end_col, end_row
     return start_col, start_row, end_col, end_row
 
 """
@@ -261,7 +271,7 @@ def extract_cropped_rain_data():
     rainfile = []
     cum_rain_totals = np.zeros((1,1)) # shape is arbitrary here, it gets changed later
     for f in glob.iglob(radar_mult_source):
-        #print f
+        print f
         basin_header = read_ascii_header(basinsource)  # this does not change as there is only one file
         radar_header = read_ascii_header(f)   # need to check the header each time for radar
         
@@ -269,10 +279,11 @@ def extract_cropped_rain_data():
         start_col, start_row, end_col, end_row = calculate_crop_coords(basin_header, radar_header)
         
         print start_col, start_row, end_col, end_row
-        start_col = int(round(start_col))
-        start_row = int(round(start_row)) 
-        end_col = int(round(end_col))
-        end_row = int(round(end_row))
+        start_col = int(start_col)
+        start_row = int(start_row) 
+        end_col = int(end_col)
+        end_row = int(end_row)
+        print start_col, start_row, end_col, end_row
         
         ##### WARNING MAsSIVE FUDGE CODE WITH MAGIC NUMBERS
         if radar_header[0] < 1000:
@@ -290,7 +301,7 @@ def extract_cropped_rain_data():
         # (should not be issue over land but better safe than sorry)
         
         # Crop the rainfall radar grid of the whole country to the subset area
-        cur_croppedrain = cur_rawgrid[start_row:end_row, start_col:end_col]###/32   division done in NimPy now 
+        cur_croppedrain = cur_rawgrid[start_row:end_row, start_col:end_col]/32   # division by 32 done in NIMROD_convert.py now 
         print cur_croppedrain
         
         # Create the first row of the rainfile by stacking the rainfall rates side by side with hstack
@@ -351,7 +362,7 @@ def create_catchment_mean_rainfall(rainfile):
     np.savetxt(uniform_hourly_rainfall_name, average_rain_arr, delimiter=' ', fmt='%1.1f')
 
 """
-For mean rainfall, cells not entirely within the catchmnet boundaries should be weighted appropriately.  
+For mean rainfall, cells not entirely within the catchment boundaries should be weighted appropriately.  
 I.e. If you include radar raincells that don't cover the entire catchment in the average, you are
 giving them disproportionate weigthing.
 
@@ -493,9 +504,9 @@ def write_sample_radar_img():
 #=-=-=-=-=-=-=-=-=-=
 
 # You need to uncomment the next three lines to prepare the hydroindex
-base_hydroindex = create_base_indexgrid(CROPPED_RADAR_DEM)
-upscaled_hydroindex = create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM)
-hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRAIN_DEM)
+#base_hydroindex = create_base_indexgrid(CROPPED_RADAR_DEM)
+#upscaled_hydroindex = create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM)
+#hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRAIN_DEM)
 
 # Uncomment if you want a sanity check on the output
 #plt.imshow(terrain_mask_test, interpolation='none')
@@ -504,7 +515,9 @@ hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRA
 #print base_hydroindex
 #print upscaled_hydroindex
 
-write_hydroindex_to_file("ryedale_hydroindex_test_5m.asc", hydroindex_masked)
+#write_hydroindex_to_file("ryedale_hydroindex_test_5m.asc", hydroindex_masked)
 
+create_catchment_weighted_rainfall(input_rainfile, basinsource)
 
-#create_catchment_weighted_rainfall(input_rainfile, basinsource)
+# Let's make a rainfile for spatially variable rainfall
+#extract_cropped_rain_data()

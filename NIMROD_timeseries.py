@@ -65,21 +65,21 @@ basinsource = basinpath + 'boscastle5m_bedrock_fill.asc'
 CROPPED_RADAR_DEM = "boscastle_crop_radar.asc"
 TERRAIN_DEM = "/mnt/bbc62661-d135-4fe6-a100-2c2eb39ae34d/Analyses/HydrogeomorphPaper/BOSCASTLE/PaperSimulations/boscastle5m_bedrock_fill.asc"
 
-input_rainfile = "boscastle_rainfile_5min.txt"
+input_rainfile = "boscastle_rainfile_5min_stagger1.txt"
 
 ###=-=-=-=-=-=-=-=-
 ### OUTPUT NAMES
 ###-=-=-=-=-==-=-==
 
-cumulative_rainfall_raster_name = 'rainfall_totals_boscastle.asc'
+cumulative_rainfall_raster_name = 'rainfall_totals_boscastle2.asc'
 
-five_min_rainfall_spatial_timeseries_name = 'boscastle_rainfile_5min.txt'
-hourly_spatial_rainfall_timeseries_name = 'boscastle_rainfile_hourly.txt'
+five_min_rainfall_spatial_timeseries_name = 'boscastle_rainfile_5min_stagger1.txt'
+hourly_spatial_rainfall_timeseries_name = 'boscastle_rainfile_hourly_stagger1.txt'
 
-uniform_hourly_rainfall_name = "BOSCASTLE_rainfile_uniform24hr_hourly.txt"
-weighted_uniform_hourly_rainfall_name = "BOSCASTLE_WEIGHTED_UNIFORM_RAINFALL_5min.txt"
+uniform_hourly_rainfall_name = "BOSCASTLE_unweighted_rainfile_uniform24hr_hourly_stagger1.txt"
+weighted_uniform_hourly_rainfall_name = "BOSCASTLE_WEIGHTED_UNIFORM_RAINFALL_5min_stagger1.txt"
 
-cropped_test_radar_name = "boscastle_crop_radar.asc"
+cropped_test_radar_name = "boscastle_crop_radar_stagger1.asc"
 
 """
 Reads in header information from an ASCII DEM
@@ -248,11 +248,11 @@ def calculate_crop_coords(basin_header, radar_header):
     
     # Floor and Ceil used to ensure all rainfall area covering basin is captured,
     # Even if 
-    start_col = np.floor( xp / cellres_radar )-1   #Should be -1 as indexing starts at 0?
-    end_col = np.ceil( (xpp + xp) / cellres_radar )-1
+    start_col = np.floor( xp / cellres_radar )   #Should be -1 as indexing starts at 0?
+    end_col = np.ceil( (xpp + xp) / cellres_radar )
     
-    start_row = np.floor(nrows_radar - ( (yp + ypp)/cellres_radar ))  -1
-    end_row = np.ceil(nrows_radar - (yp/cellres_radar)) -1
+    start_row = np.floor(nrows_radar - ( (yp + ypp)/cellres_radar ))
+    end_row = np.ceil(nrows_radar - (yp/cellres_radar))
     
     print start_col, start_row, end_col, end_row
     return start_col, start_row, end_col, end_row
@@ -281,14 +281,16 @@ def extract_cropped_rain_data():
         print start_col, start_row, end_col, end_row
         start_col = int(start_col)
         start_row = int(start_row) 
-        end_col = int(end_col)
-        end_row = int(end_row)
+        end_col = int(end_col) 
+        end_row = int(end_row) 
         print start_col, start_row, end_col, end_row
         
-        ##### WARNING MAsSIVE FUDGE CODE WITH MAGIC NUMBERS
-        if radar_header[0] < 1000:
-            end_col = end_col + 1
-        ##### WARNING THIS IS A FUDGE TO GET AROUND THE STUPID CHANGING RADAR DOMAIN SIZES!
+        ##### WARNING HARD CODED VARAIBLE CHANGE TO DEAL WITH SPECIAL CASE
+        ##### OF RYEDALE RADAR. (Domain changes size which misaligns row and col 
+        ##### calculations done previously. Not needed for Boscastle and can be commented
+        ##### out)
+        #if radar_header[0] < 1000:
+        #    end_col = end_col + 1
             
         # Can replace above with if statement?
 
@@ -444,6 +446,7 @@ def calculate_weighting_array(terrain_dem):
     
     # To correct for the size of catchment relative to radar grid rectangular size. 
     mult_ratio = no_radar_cells / no_catchment_cells
+    
     #print weighting_array
     return mult_ratio, weighting_array
 
@@ -517,7 +520,9 @@ def write_sample_radar_img():
 
 #write_hydroindex_to_file("ryedale_hydroindex_test_5m.asc", hydroindex_masked)
 
-create_catchment_weighted_rainfall(input_rainfile, basinsource)
+#create_catchment_weighted_rainfall(input_rainfile, basinsource)
+
+create_catchment_mean_rainfall(input_rainfile)
 
 # Let's make a rainfile for spatially variable rainfall
 #extract_cropped_rain_data()

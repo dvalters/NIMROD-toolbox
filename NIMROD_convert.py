@@ -37,9 +37,9 @@ def convert_OSGB36_to_UTM30(xcoord, ycoord):
 # check to see if gride cell resolution is same in both dimensions
 def check_horiz_vert_resolution(row_interval_res, col_interval_res):
     if row_interval_res != col_interval_res:
-        print "Warning: the row resolution ", row_interval_res, "is not the \
+        print("Warning: the row resolution ", row_interval_res, "is not the \
         same resolution as the column resolution",  col_interval_res, " in this \
-        dataset. Row resolution has been used to set the ASCII 'cellsize'. Check your data."
+        dataset. Row resolution has been used to set the ASCII 'cellsize'. Check your data.")
         
 #write the array and header to an ascii file
 def write_NIMROD_toASCII(asciiname, radararray, header):
@@ -58,7 +58,7 @@ def ingest_NIMROD_file(full_filepath):
     file_id = open(full_filepath,"rb")
     record_length, = struct.unpack(">l", file_id.read(4))
     if record_length != 512: 
-        raise "Unexpected record length", record_length
+        raise( "Unexpected record length", record_length)
     
     # Set up the arrays, with the correct type
     gen_ints = array.array("h")
@@ -92,11 +92,11 @@ def ingest_NIMROD_file(full_filepath):
     
     grid_typeID = gen_ints[14]
     grid_type = grid_types[str(grid_typeID)] #(Dictionaries need a string to look up)
-    print grid_type
+    print(grid_type)
     
     record_length, = struct.unpack(">l", file_id.read(4))
     if record_length != 512: 
-        raise "Unexpected record length", record_length
+        raise( "Unexpected record length", record_length)
         
     chars = characters.tostring()
     
@@ -129,18 +129,18 @@ def ingest_NIMROD_file(full_filepath):
     #Note if you use the data in spec_reals, the co-ordnates are 500m apart...probably not big enough to worry about    
     record_length, = struct.unpack(">l", file_id.read(4))
     if record_length != array_size * 2: 
-        raise "Unexpected record length", record_length
+        raise( "Unexpected record length", record_length)
     
     data = array.array("h")
     try:
         data.read(file_id, array_size) # read() is deprecated. And it only reads linearly through a file
         record_length, = struct.unpack(">l", file_id.read(4))
-        if record_length != array_size * 2: raise "Unexpected record length", record_length
+        if record_length != array_size * 2: raise( "Unexpected record length", record_length)
         data.byteswap()
         #print "First 100 values are", data[:100]
         #print "Last 100 values are", data[-100:]
     except:
-        print "Read failed"
+        print( "Read failed")
         
     radararray = np.reshape(data, (nrows,ncols)) 
     radararray = radararray / 32.0 # This is due to a strange NIMROD convention where everything is *32
@@ -154,7 +154,7 @@ def ingest_NIMROD_file(full_filepath):
 def convert_multiple_files(path_to_dir, basename):
     # The base name will should be appended to a wildcard to narrow down the search.
     for filename in glob(path_to_dir + basename):
-        print filename
+        print( filename)
         thisradararray, thisheader = ingest_NIMROD_file(filename)
         asciiname = filename + '.asc'
         write_NIMROD_toASCII(asciiname, thisradararray, thisheader)
@@ -163,7 +163,7 @@ def convert_single_file(path, fname, ext, asciiname):
     full_fname = path + fname + '.' + ext
     radararray, header = ingest_NIMROD_file(full_fname)
     write_NIMROD_toASCII(asciiname, radararray, header)
-    print "NIMROD file converted to ASCII: ", asciiname
+    print("NIMROD file converted to ASCII: ", asciiname)
     
 def show_radar_image(full_filepath):
     #full_fname = path + fname + '.' + ext
@@ -177,15 +177,15 @@ def show_radar_image(full_filepath):
 # File name and extension
 #fname = '201201010305_nimrod_ng_radar_rainrate_composite_1km_UK'  # Testing the current files
 fpath = ''
-fname = "metoffice-c-band-rain-radar_uk_200408151545_1km-composite"
-file_ext = 'dat'
+fname = "201201160000_nimrod_ng_radar_rainrate_composite_1km_UK"
+file_ext = ''
 asciiname = "NIMtest.asc"
 
 # for multiple files. You do not need to specify a basename if you want to conver ALL files in dir.
 basename = "*composite.dat"
 
-#convert_single_file(fpath, fname, file_ext, asciiname)
-convert_multiple_files(fpath, basename)
+convert_single_file(fpath, fname, file_ext, asciiname)
+#convert_multiple_files(fpath, basename)
 
 
 # To do:

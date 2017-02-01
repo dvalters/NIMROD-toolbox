@@ -17,7 +17,7 @@ purpose.
 # Look up all the meanings of the header values in the NIMORD format document available at the BADC
 # Charles Kilburn Aug 2008
 # Extended: Declan Valters Apr 2015
-
+from __future__ import print_function
 import os, stat, re, sys, time
 import struct
 import array
@@ -64,15 +64,16 @@ def ingest_NIMROD_file(full_filepath):
     gen_ints = array.array("h")
     gen_reals = array.array("f")
     spec_reals = array.array("f")
-    characters = array.array("c")
+    characters = array.array("b")
     spec_ints = array.array("h")
     
     # read in the data from the open file
-    gen_ints.read(file_id, 31) 
-    gen_reals.read(file_id, 28)
-    spec_reals.read(file_id, 45)
-    characters.read(file_id, 56)
-    spec_ints.read(file_id, 51)
+    # Note array.read deprecated since Py3, use fromfile() instead
+    gen_ints.fromfile(file_id, 31) 
+    gen_reals.fromfile(file_id, 28)
+    spec_reals.fromfile(file_id, 45)
+    characters.fromfile(file_id, 56)
+    spec_ints.fromfile(file_id, 51)
     
     gen_ints.byteswap()
     gen_reals.byteswap()
@@ -133,7 +134,7 @@ def ingest_NIMROD_file(full_filepath):
     
     data = array.array("h")
     try:
-        data.read(file_id, array_size) # read() is deprecated. And it only reads linearly through a file
+        data.fromfile(file_id, array_size) # read() is deprecated. And it only reads linearly through a file
         record_length, = struct.unpack(">l", file_id.read(4))
         if record_length != array_size * 2: raise( "Unexpected record length", record_length)
         data.byteswap()
@@ -160,7 +161,7 @@ def convert_multiple_files(path_to_dir, basename):
         write_NIMROD_toASCII(asciiname, thisradararray, thisheader)
     
 def convert_single_file(path, fname, ext, asciiname):
-    full_fname = path + fname + '.' + ext
+    full_fname = path + fname + ext
     radararray, header = ingest_NIMROD_file(full_fname)
     write_NIMROD_toASCII(asciiname, radararray, header)
     print("NIMROD file converted to ASCII: ", asciiname)
@@ -178,7 +179,7 @@ def show_radar_image(full_filepath):
 #fname = '201201010305_nimrod_ng_radar_rainrate_composite_1km_UK'  # Testing the current files
 fpath = ''
 fname = "201201160000_nimrod_ng_radar_rainrate_composite_1km_UK"
-file_ext = ''
+file_ext = ''  # note: Put the . (dot) before the extension now, e.g. ".bin" or ".dat"
 asciiname = "NIMtest.asc"
 
 # for multiple files. You do not need to specify a basename if you want to conver ALL files in dir.

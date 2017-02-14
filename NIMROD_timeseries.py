@@ -48,22 +48,23 @@ import pyproj
 #radarpath = "D:\\DATASETS\\NIMROD\\NIMROD\\1km-Composite\\2005\\19June\\datfiles\\"
 
 # USE THIS FOR THE SINGLE RADAR IMAGE EXTRACTION
-radarpath = "/home/dav/DATADRIVE/DATASETS/NIMROD/NIMROD/BOSCASTLE/Boscastleflood/asciifiles/"
+#radarpath = "/home/dav/DATADRIVE/DATASETS/NIMROD/NIMROD/BOSCASTLE/Boscastleflood/asciifiles/"
+radarpath = "/run/media/dav/SHETLAND/Analyses/RadarData/RyedaleAsc/"
 radarsource = radarpath + "metoffice-c-band-rain-radar_uk_200408160000_1km-composite.txt"
 
 # USE THIS FOR SETTING THE DIRECTORY AND FILE BASENAME OF YOUR ASCII RADAR FILES
 # Will match all files in following pattern:
-radar_wildcard_file = "*composite.txt"
+radar_wildcard_file = "*.asc"
 radar_mult_source = radarpath + radar_wildcard_file
 
 #basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
 #basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
 
-basinpath = "/mnt/bbc62661-d135-4fe6-a100-2c2eb39ae34d/Analyses/HydrogeomorphPaper/BOSCASTLE/PaperSimulations/"  
-basinsource = basinpath + 'boscastle5m_bedrock_fill.asc'
+basinpath = "/run/media/dav/SHETLAND/Analyses/HydrogeomorphPaper/rainfall_maps/"  
+basinsource = basinpath + 'RyedaleElevations0.asc'
 
-CROPPED_RADAR_DEM = "boscastle_crop_radar.asc"
-TERRAIN_DEM = "/mnt/bbc62661-d135-4fe6-a100-2c2eb39ae34d/Analyses/HydrogeomorphPaper/BOSCASTLE/PaperSimulations/boscastle5m_bedrock_fill.asc"
+CROPPED_RADAR_DEM = "ryedale_crop_radar.asc"
+TERRAIN_DEM = "/Analyses/HydrogeomorphPaper/BOSCASTLE/PaperSimulations/boscastle5m_bedrock_fill.asc"
 
 input_rainfile = "boscastle_rainfile_5min_stagger1.txt"
 
@@ -71,15 +72,15 @@ input_rainfile = "boscastle_rainfile_5min_stagger1.txt"
 ### OUTPUT NAMES
 ###-=-=-=-=-==-=-==
 
-cumulative_rainfall_raster_name = 'rainfall_totals_boscastle2.asc'
+cumulative_rainfall_raster_name = 'rainfall_totals_ryedale2.asc'
 
-five_min_rainfall_spatial_timeseries_name = 'boscastle_rainfile_5min_stagger1.txt'
-hourly_spatial_rainfall_timeseries_name = 'boscastle_rainfile_hourly_stagger1.txt'
+five_min_rainfall_spatial_timeseries_name = 'ryedale_rainfile_5min_stagger1.txt'
+hourly_spatial_rainfall_timeseries_name = 'ryedale_rainfile_hourly_stagger1.txt'
 
-uniform_hourly_rainfall_name = "BOSCASTLE_unweighted_rainfile_uniform24hr_hourly_stagger1.txt"
-weighted_uniform_hourly_rainfall_name = "BOSCASTLE_WEIGHTED_UNIFORM_RAINFALL_5min_stagger1.txt"
+uniform_hourly_rainfall_name = "ryedale_unweighted_rainfile_uniform24hr_hourly_stagger1.txt"
+weighted_uniform_hourly_rainfall_name = "ryedale_WEIGHTED_UNIFORM_RAINFALL_5min_stagger1.txt"
 
-cropped_test_radar_name = "boscastle_crop_radar_stagger1.asc"
+cropped_test_radar_name = "ryedale_crop_radar_stagger1.asc"
 
 """
 Reads in header information from an ASCII DEM
@@ -87,7 +88,7 @@ Reads in header information from an ASCII DEM
 def read_ascii_header(ascii_raster_file):
     
     with open(ascii_raster_file) as f:
-        header_data = [float(f.next().split()[1]) for x in xrange(6)] #read the first 6 lines
+        header_data = [float(f.__next__().split()[1]) for x in range(6)] #read the first 6 lines
     return header_data
     
 """
@@ -163,13 +164,13 @@ def create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM):
     mult_factor_cols = terrainNcols / radarNcols
     mult_factor_rows = terrainNrows / radarNrows
     
-    print mult_factor_cols, mult_factor_rows
+    print(mult_factor_cols, mult_factor_rows)
     
     # Now resample. Using nearest neighbour (order=0) as we don't want any fancy interpolation going on
     # (Although this could be a later feature) (order!=0)
     # The mult_factor can have different values for each axis, and they can be float values as I understand
     upscaled_hydroindex = scipy.ndimage.zoom(base_hydroindex, (mult_factor_rows, mult_factor_cols), order=0)
-    print upscaled_hydroindex.shape
+    print(upscaled_hydroindex.shape)
     
     return upscaled_hydroindex
 
@@ -218,16 +219,16 @@ def calculate_crop_coords(basin_header, radar_header):
     # set values for easier calcs
     y0_radar = radar_header[3]
     x0_radar = radar_header[2]
-    print x0_radar, y0_radar
+    print(x0_radar, y0_radar)
     
     y0_basin = basin_header[3]
     x0_basin = basin_header[2]
     
     x0_basin_UTM, y0_basin_UTM = convert_OSGB36_to_UTM30(x0_basin, y0_basin)
-    print x0_basin_UTM, y0_basin_UTM
+    print(x0_basin_UTM, y0_basin_UTM)
     
     x0_radar_UTM, y0_radar_UTM = convert_OSGB36_to_UTM30(x0_radar, y0_radar)
-    print x0_radar_UTM, y0_radar_UTM
+    print(x0_radar_UTM, y0_radar_UTM)
     
     nrows_radar = radar_header[1]
     ncols_radar = radar_header[0]
@@ -240,11 +241,15 @@ def calculate_crop_coords(basin_header, radar_header):
     
     xp = x0_basin_UTM - x0_radar_UTM
     yp = y0_basin_UTM - y0_radar_UTM
-    print "xp:", xp, yp
+    print("xp:", xp, yp)
+    
+#    xp = x0_basin - x0_radar
+#    yp = y0_basin - y0_radar
+#    print("xp:", xp, yp)
     
     xpp = ncols_basin * cellres_basin
     ypp = nrows_basin * cellres_basin
-    print "ypp: ", xpp, ypp 
+    print("ypp: ", xpp, ypp) 
     
     # Floor and Ceil used to ensure all rainfall area covering basin is captured,
     # Even if 
@@ -254,9 +259,42 @@ def calculate_crop_coords(basin_header, radar_header):
     start_row = np.floor(nrows_radar - ( (yp + ypp)/cellres_radar ))
     end_row = np.ceil(nrows_radar - (yp/cellres_radar))
     
-    print start_col, start_row, end_col, end_row
+    print(start_col, start_row, end_col, end_row)
     return start_col, start_row, end_col, end_row
 
+    
+def calculate_crop_coords2(basin_header, radar_header):
+    # set values for easier calcs
+    y0_rad = round(radar_header[3])
+    x0_rad = round(radar_header[2])
+    
+    y0_bas = round(basin_header[3])
+    x0_bas = round(basin_header[2])
+    
+    x0_bas, y0_bas = convert_OSGB36_to_UTM30(x0_bas, y0_bas)
+    
+    nrows_rad = radar_header[1]
+    ncols_rad = radar_header[0]
+    
+    nrows_bas = basin_header[1]
+    ncols_bas = basin_header[0]
+    
+    cellres_rad = radar_header[4]
+    cellres_bas = basin_header[4]
+    
+    xp = x0_bas - x0_rad
+    yp = y0_bas - y0_rad
+    
+    xpp = ncols_bas * cellres_bas
+    ypp = nrows_bas * cellres_bas
+    
+    start_col = xp / cellres_rad
+    end_col = (xpp + xp) / cellres_rad
+    
+    start_row = nrows_rad - ( (yp + ypp)/cellres_rad )
+    end_row = nrows_rad - (yp/cellres_rad)
+    
+    return start_col, start_row, end_col, end_row
 """
 This loops over the radar rasters and extracts the relevant sub-section
 of the radar data area of interest.
@@ -271,40 +309,42 @@ def extract_cropped_rain_data():
     rainfile = []
     cum_rain_totals = np.zeros((1,1)) # shape is arbitrary here, it gets changed later
     for f in glob.iglob(radar_mult_source):
-        print f
+        print(f)
         basin_header = read_ascii_header(basinsource)  # this does not change as there is only one file
         radar_header = read_ascii_header(f)   # need to check the header each time for radar
         
         # since grid size can change (Thanks, Met Office!), these values have to be recaclulated for every iteration...ugh
-        start_col, start_row, end_col, end_row = calculate_crop_coords(basin_header, radar_header)
+        start_col, start_row, end_col, end_row = calculate_crop_coords2(basin_header, radar_header)
         
-        print start_col, start_row, end_col, end_row
-        start_col = int(start_col)
-        start_row = int(start_row) 
-        end_col = int(end_col) 
-        end_row = int(end_row) 
-        print start_col, start_row, end_col, end_row
+        print(start_col, start_row, end_col, end_row)
+        start_col = int(round(start_col))
+        start_row = int(round(start_row) )
+        end_col = int(round(end_col) )
+        end_row = int(round(end_row) )
+        print(start_col, start_row, end_col, end_row)
         
         ##### WARNING HARD CODED VARAIBLE CHANGE TO DEAL WITH SPECIAL CASE
         ##### OF RYEDALE RADAR. (Domain changes size which misaligns row and col 
         ##### calculations done previously. Not needed for Boscastle and can be commented
         ##### out)
-        #if radar_header[0] < 1000:
-        #    end_col = end_col + 1
+        if radar_header[0] < 1000:
+            end_col = end_col + 1
             
         # Can replace above with if statement?
 
         #print start_col, start_row, end_col, end_row        
         
         # Load in the entire rainfall radar grid for this timestep
-        cur_rawgrid = np.loadtxt(f, skiprows=6)
-        print cur_rawgrid
+        cur_rawgrid = np.genfromtxt(f, skip_header=6, filling_values=0.0, loose=True, invalid_raise=False)
+        print(cur_rawgrid)
+        print(cur_rawgrid.shape)
         # perhaps make sure that -1 values and NODATA values are masked or made = 0 
         # (should not be issue over land but better safe than sorry)
         
         # Crop the rainfall radar grid of the whole country to the subset area
         cur_croppedrain = cur_rawgrid[start_row:end_row, start_col:end_col]/32   # division by 32 done in NIMROD_convert.py now 
-        print cur_croppedrain
+        print(cur_croppedrain)
+        print(cur_croppedrain.shape)
         
         # Create the first row of the rainfile by stacking the rainfall rates side by side with hstack
         cur_rainrow = np.hstack(cur_croppedrain)
@@ -331,7 +371,7 @@ def extract_cropped_rain_data():
     if rainfile_arr_rows % 2 != 0:            # check if odd
         extra = np.zeros(rainfile_arr_cols)   # number of hydroindex cells
         rainfile_arr = np.vstack([rainfile_arr, extra])  # append extra row to make even
-        print rainfile_arr.shape #just to check, should be even now
+        print(rainfile_arr.shape) #just to check, should be even now
         rainfile_arr_rows, rainfile_arr_cols = rainfile_arr.shape # double check we have even no. or rows
     
     # Now we are going to calculate hourly rainfall from the 5 min data by taking binned averages
@@ -343,7 +383,7 @@ def extract_cropped_rain_data():
     # We are taking the mean down the columns. 
     # Remember that we have already binned into hourly bins previously.
     hourly_mean = reshaped_rain.mean(axis=1)  
-    print hourly_mean.shape # just to check (it should print the number of hours (rows) by grid cells (columns))
+    print(hourly_mean.shape) # just to check (it should print the number of hours (rows) by grid cells (columns))
     
     rounded_hourly_rain = np.around(hourly_mean, decimals=1)
     
@@ -385,7 +425,7 @@ def create_catchment_weighted_rainfall(rainfile, terrain_dem):
     # open the variable rainfile, multiply columns by weighting amounts
     weighted_rainfall_arr = rainfile_arr * weighting_flattened
     
-    print rainfile_arr
+    print(rainfile_arr)
     #print weighted_rainfall_arr
     # average along axis 1.
     average_weighted_rain_array = np.mean(weighted_rainfall_arr, axis=1)*mult_ratio
@@ -398,7 +438,7 @@ do not fully cover the catchment domain. This is used in conjuction with create_
 def calculate_weighting_array(terrain_dem):
     terrain_array = np.loadtxt(terrain_dem, skiprows=6)
     terrain_NODATA = read_ascii_header(terrain_dem)[5]
-    print terrain_array
+    print(terrain_array)
     
     # no need to reload sample image, use base index grid
     baseindexgrid = create_base_indexgrid(CROPPED_RADAR_DEM)
@@ -416,7 +456,7 @@ def calculate_weighting_array(terrain_dem):
     # Iterate row-wise over the entire arrat, allow writing values to array
     # Specify that we want to iterate in C-style order, i.e. row by row.
     for i in np.nditer(baseindexgrid, op_flags=['readwrite'], order='C'):
-        print i
+        print(i)
         # Check that the arrays are the same shape
         #print terrain_array.shape == upscaled_baseindexgrid.shape
         
@@ -426,7 +466,7 @@ def calculate_weighting_array(terrain_dem):
         
         # COunt the number of cells in this hydroindex zone
         total_cells_this_hydrozone = np.count_nonzero(upscaled_baseindexgrid == i)
-        print "Total number of cells in hydrozone ", i.__int__(), ": ", total_cells_this_hydrozone
+        print("Total number of cells in hydrozone ", i.__int__(), ": ", total_cells_this_hydrozone)
         
         #print cells_in_catchment_boolean.size
         
@@ -434,13 +474,13 @@ def calculate_weighting_array(terrain_dem):
         # This gives you the number of cells that are in the current hydro index zone this iteration
         # that are not over NODATA cells
         number_of_catchment_cells = cells_in_catchment_boolean.sum()
-        print "no. of catchment cells within hydrozone: ", number_of_catchment_cells
+        print("no. of catchment cells within hydrozone: ", number_of_catchment_cells)
         # Should be 1 if all cells are in the catchment
         weighting_ratio = number_of_catchment_cells / total_cells_this_hydrozone
         # set weighting ratio in array
         # Note: http://docs.scipy.org/doc/numpy/reference/arrays.nditer.html
         #weighting_array[i] = weighting_ratio
-        print "weigthing ratio: ", weighting_ratio
+        print ("weigthing ratio: ", weighting_ratio)
         
         weighting_array.flat[int(i)-1] = weighting_ratio
     
@@ -472,7 +512,7 @@ def write_sample_radar_img():
     sampleradar_header[5] = radar_header[5] # set no data to be the same as well
     sampleradar_header[0] = ncols
     sampleradar_header[1] = nrows
-    print "SAMPLE RADAR HEADER", sampleradar_header
+    print("SAMPLE RADAR HEADER", sampleradar_header)
     sampleradarhdr = convert_array_hdr_to_str_hdr(sampleradar_header)    
     
     np.savetxt(cropped_test_radar_name, croppedrain, header=sampleradarhdr, comments='', delimiter=' ', fmt='%1.1f')
@@ -522,7 +562,7 @@ def write_sample_radar_img():
 
 #create_catchment_weighted_rainfall(input_rainfile, basinsource)
 
-create_catchment_mean_rainfall(input_rainfile)
+#create_catchment_mean_rainfall(input_rainfile)
 
 # Let's make a rainfile for spatially variable rainfall
-#extract_cropped_rain_data()
+extract_cropped_rain_data()

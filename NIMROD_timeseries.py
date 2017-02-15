@@ -26,7 +26,7 @@ To Do:
 ## File for Converting the 5 minute NIMROD data (already converted to ascii format)
 ## into hourly rainfall rates
 
-from __future__ import division
+from __future__ import division, print_function
 # because we want to get the answer 5/2 = 2.5 (Python 3), not 5/2 = 2 (Python 2.x)
 from linecache import getline
 
@@ -342,7 +342,7 @@ def extract_cropped_rain_data():
         # (should not be issue over land but better safe than sorry)
         
         # Crop the rainfall radar grid of the whole country to the subset area
-        cur_croppedrain = cur_rawgrid[start_row:end_row, start_col:end_col]/32   # division by 32 done in NIMROD_convert.py now 
+        cur_croppedrain = cur_rawgrid[start_row:end_row, start_col:end_col]#/32   # division by 32 done in NIMROD_convert.py now 
         print(cur_croppedrain)
         print(cur_croppedrain.shape)
         
@@ -356,7 +356,9 @@ def extract_cropped_rain_data():
             new_shape = cur_croppedrain.shape
             cum_rain_totals = np.zeros(new_shape)
         
-        cum_rain_totals += cur_croppedrain
+        """Careful!, This depends on the time resolution of the radar data. 
+           Divide by 12 if 5 min data (5*12 mins = 1hour)"""
+        cum_rain_totals += cur_croppedrain / 12
         
     #print total_rainfall
     np.savetxt(cumulative_rainfall_raster_name, cum_rain_totals, delimiter=' ', fmt='%1.1f')

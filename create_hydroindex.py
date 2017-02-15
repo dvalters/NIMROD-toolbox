@@ -19,7 +19,7 @@ To Do:
 1) Error handling if Cellsize is not an integer
 2) Writing to different formats (default is ascii grid .asc)
 """
-from __future__ import division
+from __future__ import division, print_function
 # because we want to get the answer 5/2 = 2.5 (Python 3), not 5/2 = 2 (Python 2.x)
 
 
@@ -42,14 +42,13 @@ you need __init__.py files in each directory.
 
 """
 
-CROPPED_RADAR_DEM = "cropped_test_radar.asc"
-TERRAIN_DEM = "ryedale20m_fillcrop.asc"
+
 
 
 def read_ascii_header(ascii_raster_file):
     
     with open(ascii_raster_file) as f:
-        header_data = [float(f.next().split()[1]) for x in xrange(6)] #read the first 6 lines
+        header_data = [float(f.__next__().split()[1]) for x in range(6)] #read the first 6 lines
          
     #raster_data = np.genfromtxt(ascii_raster_file, delimiter=' ', skip_header=6)
     #raster_data = raster_data.reshape(header_data[1], header_data[0]) #rows, columns
@@ -68,7 +67,7 @@ def create_base_indexgrid(CROPPED_RADAR_DEM):
     
     return base_indexgrid
     
-def create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM):
+def create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM, TERRAIN_DEM):
     radar_cellsize = read_ascii_header(CROPPED_RADAR_DEM)[4]
     terrain_cellsize = read_ascii_header(TERRAIN_DEM)[4]
     # We want to scale up the base grid to the resolution of the terrain DEM
@@ -87,13 +86,13 @@ def create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM):
     mult_factor_cols = terrainNcols / radarNcols
     mult_factor_rows = terrainNrows / radarNrows
     
-    print mult_factor_cols, mult_factor_rows
+    print(mult_factor_cols, mult_factor_rows)
     
     # Now resample. Using nearest neighbour (order=0) as we don't want any fancy interpolation going on
     # (Although this could be a later feature) (order!=0)
     # The mult_factor can have different values for each axis, and they can be float values as I understand
     upscaled_hydroindex = scipy.ndimage.zoom(base_hydroindex, (mult_factor_rows, mult_factor_cols), order=0)
-    print upscaled_hydroindex.shape
+    print(upscaled_hydroindex.shape)
     
     return upscaled_hydroindex
     
@@ -130,11 +129,19 @@ def write_hydroindex_to_file(hydroindex_filename, hydroindex_masked):
 #=-=-=-=-=-
 # MAIN
 #=-=-=-=-=-
+CROPPED_RADAR_DEM = "/run/media/dav/SHETLAND/Dev/nimrod-toolbox/ryedale_cropped_test_radar.asc"
+TERRAIN_DEM = "/run/media/dav/SHETLAND/Analyses/HydrogeomorphPaper/SwathProfile/Swath_secondVisit/RyedaleElevations0.asc"
 
-base_hydroindex = create_base_indexgrid(CROPPED_RADAR_DEM)
-upscaled_hydroindex = create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM)
 
-hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRAIN_DEM)
+#base_hydroindex = create_base_indexgrid(CROPPED_RADAR_DEM)
+#upscaled_hydroindex = create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM)
+
+# You can also use this to make a cumulative rainfall total map, youalso need to set TERRAIN_DEM
+base_raintotal_grid = np.loadtxt("/run/media/dav/SHETLAND/Dev/nimrod-toolbox/rainfall_totals_ryedale_times32.asc", skiprows=6)
+upscaled_rain_totals = create_upscaled_hydroindex(base_raintotal_grid, CROPPED_RADAR_DEM, TERRAIN_DEM)
+write_hydroindex_to_file("ryedale_raintotal_5m_fixed.asc", upscaled_rain_totals)
+
+#hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRAIN_DEM)
 
 
 #plt.imshow(terrain_mask_test, interpolation='none')
@@ -143,7 +150,7 @@ hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRA
 #print base_hydroindex
 #print upscaled_hydroindex
 
-write_hydroindex_to_file("ryedale_hydroindex_test2.asc", hydroindex_masked)
+#write_hydroindex_to_file("ryedale_hydroindex_test2.asc", hydroindex_masked)
 
 
 

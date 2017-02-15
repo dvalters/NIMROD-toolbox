@@ -137,9 +137,9 @@ TERRAIN_DEM = "/run/media/dav/SHETLAND/Analyses/HydrogeomorphPaper/SwathProfile/
 #upscaled_hydroindex = create_upscaled_hydroindex(base_hydroindex, CROPPED_RADAR_DEM)
 
 # You can also use this to make a cumulative rainfall total map, youalso need to set TERRAIN_DEM
-base_raintotal_grid = np.loadtxt("/run/media/dav/SHETLAND/Dev/nimrod-toolbox/rainfall_totals_ryedale_times32.asc", skiprows=6)
+base_raintotal_grid = np.loadtxt("/run/media/dav/SHETLAND/Dev/nimrod-toolbox/rainfall_totals_ryedale_div12.asc")
 upscaled_rain_totals = create_upscaled_hydroindex(base_raintotal_grid, CROPPED_RADAR_DEM, TERRAIN_DEM)
-write_hydroindex_to_file("ryedale_raintotal_5m_fixed.asc", upscaled_rain_totals)
+write_hydroindex_to_file("ryedale_raintotal_5m_final.asc", upscaled_rain_totals)
 
 #hydroindex_masked = crop_upscaled_hydroindex_to_basin(upscaled_hydroindex, TERRAIN_DEM)
 

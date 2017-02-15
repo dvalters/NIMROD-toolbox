@@ -49,19 +49,25 @@ import pyproj
 
 # USE THIS FOR THE SINGLE RADAR IMAGE EXTRACTION
 #radarpath = "/home/dav/DATADRIVE/DATASETS/NIMROD/NIMROD/BOSCASTLE/Boscastleflood/asciifiles/"
-radarpath = "/run/media/dav/SHETLAND/Analyses/RadarData/RyedaleAsc/"
+
+# RYEDALE
+#radarpath = "/run/media/dav/SHETLAND/Analyses/RadarData/RyedaleAsc/"
+radarpath = "/run/media/dav/SHETLAND/Analyses/RadarData/BoscastleAsc/"
+
 radarsource = radarpath + "metoffice-c-band-rain-radar_uk_200408160000_1km-composite.txt"
+
+
 
 # USE THIS FOR SETTING THE DIRECTORY AND FILE BASENAME OF YOUR ASCII RADAR FILES
 # Will match all files in following pattern:
-radar_wildcard_file = "*.asc"
+radar_wildcard_file = "*.txt"
 radar_mult_source = radarpath + radar_wildcard_file
 
 #basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
 #basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
 
 basinpath = "/run/media/dav/SHETLAND/Analyses/HydrogeomorphPaper/rainfall_maps/"  
-basinsource = basinpath + 'RyedaleElevations0.asc'
+basinsource = basinpath + 'BoscastleElevations0.asc'
 
 CROPPED_RADAR_DEM = "ryedale_crop_radar.asc"
 TERRAIN_DEM = "/Analyses/HydrogeomorphPaper/BOSCASTLE/PaperSimulations/boscastle5m_bedrock_fill.asc"
@@ -72,15 +78,24 @@ input_rainfile = "boscastle_rainfile_5min_stagger1.txt"
 ### OUTPUT NAMES
 ###-=-=-=-=-==-=-==
 
-cumulative_rainfall_raster_name = 'rainfall_totals_ryedale2.asc'
+cumulative_rainfall_raster_name = 'rainfall_totals_boscastle2.asc'
 
-five_min_rainfall_spatial_timeseries_name = 'ryedale_rainfile_5min_stagger1.txt'
-hourly_spatial_rainfall_timeseries_name = 'ryedale_rainfile_hourly_stagger1.txt'
+#five_min_rainfall_spatial_timeseries_name = 'ryedale_rainfile_5min_stagger1.txt'
+#hourly_spatial_rainfall_timeseries_name = 'ryedale_rainfile_hourly_stagger1.txt'
+#
+#uniform_hourly_rainfall_name = "ryedale_unweighted_rainfile_uniform24hr_hourly_stagger1.txt"
+#weighted_uniform_hourly_rainfall_name = "ryedale_WEIGHTED_UNIFORM_RAINFALL_5min_stagger1.txt"
+#
+#cropped_test_radar_name = "ryedale_crop_radar_stagger1.asc"
 
-uniform_hourly_rainfall_name = "ryedale_unweighted_rainfile_uniform24hr_hourly_stagger1.txt"
-weighted_uniform_hourly_rainfall_name = "ryedale_WEIGHTED_UNIFORM_RAINFALL_5min_stagger1.txt"
+# BOSCASTLE
+five_min_rainfall_spatial_timeseries_name = 'boscastle_rainfile_5min_stagger1.txt'
+hourly_spatial_rainfall_timeseries_name = 'boscastle_rainfile_hourly_stagger1.txt'
 
-cropped_test_radar_name = "ryedale_crop_radar_stagger1.asc"
+uniform_hourly_rainfall_name = "boscastle_unweighted_rainfile_uniform24hr_hourly_stagger1.txt"
+weighted_uniform_hourly_rainfall_name = "boscastle_WEIGHTED_UNIFORM_RAINFALL_5min_stagger1.txt"
+
+cropped_test_radar_name = "boscastle_crop_radar_stagger1.asc"
 
 """
 Reads in header information from an ASCII DEM
@@ -314,7 +329,7 @@ def extract_cropped_rain_data():
         radar_header = read_ascii_header(f)   # need to check the header each time for radar
         
         # since grid size can change (Thanks, Met Office!), these values have to be recaclulated for every iteration...ugh
-        start_col, start_row, end_col, end_row = calculate_crop_coords2(basin_header, radar_header)
+        start_col, start_row, end_col, end_row = calculate_crop_coords(basin_header, radar_header)
         
         print(start_col, start_row, end_col, end_row)
         start_col = int(round(start_col))
@@ -378,6 +393,7 @@ def extract_cropped_rain_data():
     
     # Now we are going to calculate hourly rainfall from the 5 min data by taking binned averages
     # First, reshape the array into 3d bins:
+    """To do: Problem here when division of array doesn't result in an integer...."""
     reshaped_rain = np.reshape(rainfile_arr, ((rainfile_arr_rows/12),12,rainfile_arr_cols)) # assuming 
     # shape = (number of timesteps in new rainfall file, radar interval to new timestep interval 
     #[i.e 5mins to 1hour steps would be 60/5 =12], no of cols

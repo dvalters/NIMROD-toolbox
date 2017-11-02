@@ -1,6 +1,8 @@
 # nimrod-toolbox
 Python tools for manipulating Met Office NIMROD data, creating timeseries from it, converting to ascii, creating hydro index for CAESAR-Lisflood and LSDCatchmentModel.
 
+**Author's note**: *I wrote these tools during my PhD to regrid rainfall radardata from the UK and Irish radar network - there are a few rough edges here and there but hopefully they may be of use to other users of Met Office NIMROD data. A few years after writing them, a newer set of tools appeared on the CEDA/BADC website that were not available to me at the time. I would recommend using the newer tools on CEDA if you have access to that service (I.e. you're a UK academic/scientist/researcher/student). (Presumably if you have access to NIMROD data outside the Met Office you have a  CEDA/BADC account)*
+
 ## Workflow for creating Rainfall Timeseries and Hydroindex File
 
 ### NIMROD_convert.py

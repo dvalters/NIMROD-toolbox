@@ -52,22 +52,24 @@ import pyproj
 
 # RYEDALE
 #radarpath = "/run/media/dav/SHETLAND/Analyses/RadarData/RyedaleAsc/"
-radarpath = "/run/media/dav/SHETLAND/Analyses/RadarData/BoscastleAsc/"
-
-radarsource = radarpath + "metoffice-c-band-rain-radar_uk_200408160000_1km-composite.txt"
-
-
+#radarpath = "/run/media/dav/SHETLAND/Analyses/RadarData/BoscastleAsc/"
+#radar_sample_file = "metoffice-c-band-rain-radar_uk_200408160000_1km-composite.txt"
+radar_sample_file = "3B-HHR-GIS.IMERG.20170913-S233000-E235959.asc"
+radarpath = "/home/dav/devel/NIMROD-toolbox/muir040517/raingrid/"
+radarsource = radarpath + radar_sample_file
 
 # USE THIS FOR SETTING THE DIRECTORY AND FILE BASENAME OF YOUR ASCII RADAR FILES
 # Will match all files in following pattern:
-radar_wildcard_file = "*.txt"
+radar_wildcard_file = "*.asc"
 radar_mult_source = radarpath + radar_wildcard_file
 
 #basinpath = 'D:\\CODE_DEV\\PyToolsPhD\\Radardata_tools\\multiple_radar_test\\'
 #basinpath = "/home/dav/DATADRIVE/CODE_DEV/PyToolsPhD/Radardata_tools/"
+#basinpath = "/run/media/dav/SHETLAND/Analyses/HydrogeomorphPaper/rainfall_maps/" 
+basinfile_name = "comonfort_prj.asc" 
+basinpath = "/home/dav/devel/NIMROD-toolbox/muir040517/basin/"
+basinsource = basinpath + basinfile_name
 
-basinpath = "/run/media/dav/SHETLAND/Analyses/HydrogeomorphPaper/rainfall_maps/"  
-basinsource = basinpath + 'BoscastleElevations0.asc'
 
 CROPPED_RADAR_DEM = "ryedale_crop_radar.asc"
 TERRAIN_DEM = "/Analyses/HydrogeomorphPaper/BOSCASTLE/PaperSimulations/boscastle5m_bedrock_fill.asc"
@@ -336,6 +338,7 @@ def extract_cropped_rain_data():
         start_row = int(round(start_row) )
         end_col = int(round(end_col) )
         end_row = int(round(end_row) )
+        print("START COL, START ROW, END COL, END ROW:")
         print(start_col, start_row, end_col, end_row)
         
         ##### WARNING HARD CODED VARAIBLE CHANGE TO DEAL WITH SPECIAL CASE
@@ -516,7 +519,8 @@ def write_sample_radar_img():
     radar_header = read_ascii_header(radarsource)   # need to check the header each time for radar
     
     # since grid size can change, these values have to be recaclulated for every iter.
-    start_col, start_row, end_col, end_row = calculate_crop_coords(basin_header, radar_header)
+    start_col, start_row, end_col, end_row = calculate_crop_coords2(basin_header, radar_header)
+    print("START COL {0}, START_ROW {1}, END_COL {2}, END_ROW {3}".format(start_col, start_row, end_col, end_row))
     rawgrid = np.loadtxt(radarsource, skiprows=6)
     
     # perhaps make sure that -1 values and NODATA values are masked or made = 0 
@@ -549,7 +553,7 @@ def write_sample_radar_img():
 # As long as resolution is the same in each file! (this should be more reliable)
 # WRITE A SAMPLE CROPPED RADAR FILE
 
-##write_sample_radar_img()
+write_sample_radar_img()
 
 # Create an average rainfall file
 #create_catchment_mean_rainfall("C:\\DATA\\PROJECTS\\HYDRO-GEOMORPHIC_STORM_RESPONSE\\CASE_STUDIES\\RYEDALE\\SPATIAL_72hr\\RYEDALE_spatial_72hr_5min.txt")
@@ -583,4 +587,4 @@ def write_sample_radar_img():
 #create_catchment_mean_rainfall(input_rainfile)
 
 # Let's make a rainfile for spatially variable rainfall
-extract_cropped_rain_data()
+#extract_cropped_rain_data()

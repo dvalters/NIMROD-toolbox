@@ -71,7 +71,7 @@ basinpath = "/home/dav/devel/NIMROD-toolbox/muir040517/basin/"
 basinsource = basinpath + basinfile_name
 
 
-CROPPED_RADAR_DEM = "ryedale_crop_radar.asc"
+CROPPED_RADAR_DEM = "cropped_radar_test.asc"
 TERRAIN_DEM = "/Analyses/HydrogeomorphPaper/BOSCASTLE/PaperSimulations/boscastle5m_bedrock_fill.asc"
 
 input_rainfile = "boscastle_rainfile_5min_stagger1.txt"
@@ -97,7 +97,7 @@ hourly_spatial_rainfall_timeseries_name = 'boscastle_rainfile_hourly_stagger1.tx
 uniform_hourly_rainfall_name = "boscastle_unweighted_rainfile_uniform24hr_hourly_stagger1.txt"
 weighted_uniform_hourly_rainfall_name = "boscastle_WEIGHTED_UNIFORM_RAINFALL_5min_stagger1.txt"
 
-cropped_test_radar_name = "boscastle_crop_radar_stagger1.asc"
+cropped_test_radar_name = "cropped_radar_test.asc"
 
 """
 Reads in header information from an ASCII DEM
@@ -527,7 +527,7 @@ def write_sample_radar_img():
     #(should not be issue over land but better safe than sorry)
     croppedrain = rawgrid[start_row:end_row ,start_col:end_col]
     plt.imshow(croppedrain, interpolation='none')
-    plt.show()
+    #plt.show()
     
     nrows, ncols = croppedrain.shape # get rows and cols from the shape of the cropped radar array
     sampleradar_header = basin_header # bring in the same georef data as the basin DEM
@@ -555,6 +555,7 @@ def write_sample_radar_img():
 # WRITE A SAMPLE CROPPED RADAR FILE
 
 write_sample_radar_img()
+extract_cropped_rain_data() 
 
 # Create an average rainfall file
 #create_catchment_mean_rainfall("C:\\DATA\\PROJECTS\\HYDRO-GEOMORPHIC_STORM_RESPONSE\\CASE_STUDIES\\RYEDALE\\SPATIAL_72hr\\RYEDALE_spatial_72hr_5min.txt")

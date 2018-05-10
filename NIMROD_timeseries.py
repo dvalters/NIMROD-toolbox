@@ -277,7 +277,7 @@ def calculate_crop_coords(basin_header, radar_header):
     end_row = np.ceil(nrows_radar - (yp/cellres_radar))
     
     print(start_col, start_row, end_col, end_row)
-    return start_col, start_row, end_col, end_row
+    return int(start_col), int(start_row), int(end_col), int(end_row)
 
     
 def calculate_crop_coords2(basin_header, radar_header):
@@ -519,14 +519,15 @@ def write_sample_radar_img():
     radar_header = read_ascii_header(radarsource)   # need to check the header each time for radar
     
     # since grid size can change, these values have to be recaclulated for every iter.
-    start_col, start_row, end_col, end_row = calculate_crop_coords2(basin_header, radar_header)
+    start_col, start_row, end_col, end_row = calculate_crop_coords(basin_header, radar_header)
     print("START COL {0}, START_ROW {1}, END_COL {2}, END_ROW {3}".format(start_col, start_row, end_col, end_row))
     rawgrid = np.loadtxt(radarsource, skiprows=6)
     
     # perhaps make sure that -1 values and NODATA values are masked or made = 0 
     #(should not be issue over land but better safe than sorry)
     croppedrain = rawgrid[start_row:end_row ,start_col:end_col]
-    mpl.pylab.imshow(croppedrain, interpolation='none')
+    plt.imshow(croppedrain, interpolation='none')
+    plt.show()
     
     nrows, ncols = croppedrain.shape # get rows and cols from the shape of the cropped radar array
     sampleradar_header = basin_header # bring in the same georef data as the basin DEM
